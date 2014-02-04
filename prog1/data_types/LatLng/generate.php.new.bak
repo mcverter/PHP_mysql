@@ -1,0 +1,309 @@
+<?php
+ini_set('display_errors', 'On');
+error_reporting(E_ALL);
+  
+$LatLng_process_order = 1;
+$LatLng_cached_math = array();
+
+
+  function gauss() { 
+    $x=random_0_1();
+    $y=random_0_1();
+
+    $u=sqrt(-2*log($x))*cos(2*pi()*$y);
+    return $u;
+  }
+
+// distance * gauss()  * posOrNegative()
+
+// function circular()
+//
+// randomAngle = 90 * random_0_1();
+// deltaLat = convertLatitude ($distance * cos(randomAngle));
+// deltaLng = convertLongitude ($distance * sin (randomAngle);
+//
+
+  // returns random number with normal distribution:
+  function gauss_ms($m=0.0,$s=1.0) { 
+
+    return gauss()*$s+$m;
+  }
+  function random_0_1() {
+  // auxiliary function
+  // returns random number with flat distribution from 0 to 1
+    return (float)rand()/(float)getrandmax();
+  }
+
+
+function checkBoundaries($maxVal, $center, $spread)
+{
+
+  $top = $center + $spread;
+  $bottom = $center - $spread;
+
+
+  if ((abs($top) > $maxVal) ||
+      (abs($bottom) > $maxVal))
+    return false;
+  else
+    return true;
+}
+
+function generateNormalLatAndLong()
+{
+}
+
+function generateNormalLat()
+{
+}
+
+function generateNormalLong()
+{
+}
+
+function generateUniformLatAndLong($latBase, $latSpread, $lngBase, $lngSpread)
+{
+  // CAN WE REUSE THE CODE HERE?
+  $info = array();
+  
+  $maxLat = $latBase + $latSpread;
+  $minLat = $latBase - $latSpread;
+  
+  if ($maxLat < $minLat)
+    {
+      $temp = $maxLat;
+      $maxLat = $minLat;
+      $minLat = $temp;
+    }
+
+  $decimalPlaces = 5;
+
+  $maxLat = $maxLat * (pow(10, $decimalPlaces));
+  $minLat = $minLat * (pow(10, $decimalPlaces));
+  $divisor = pow(10, $decimalPlaces);
+  $info[] = mt_rand($minLat, $maxLat/$divisor);
+
+
+  
+  
+  $maxLng = $lngBase + $lngSpread;
+  $minLng = $lngBase - $lngSpread;
+
+  if ($maxLng < $minLng)
+    {
+      $temp = $maxLng;
+      $maxLng = $minLng;
+      $minLng = $temp;
+    }
+
+  $decimalPlaces = 5;
+
+  $maxLng = $maxLng * (pow(10, $decimalPlaces));
+  $minLng = $minLng * (pow(10, $decimalPlaces));
+  $divisor = pow(10, $decimalPlaces);
+  $info[] = mt_rand($minLng, $maxLng/$divisor);
+
+  return join(", ", $info);
+
+}
+
+function generateUniformLat($latBase, $latSpread)
+{
+  $info = array();
+  
+
+  $maxLat = $latBase + $latSpread;
+  $minLat = $latBase - $latSpread;
+
+  if ($maxLat < $minLat)
+    {
+      $temp = $maxLat;
+      $maxLat = $minLat;
+      $minLat = $temp;
+    }
+
+  $decimalPlaces = 5;
+
+  $maxLat = $maxLat * (pow(10, $decimalPlaces));
+  $minLat = $minLat * (pow(10, $decimalPlaces));
+  $divisor = pow(10, $decimalPlaces);
+  $info[] = mt_rand($minLat, $maxLat/$divisor);
+
+  return join(", ", $info);
+}
+
+function generateUniformLong($lngBase, $lngSpread)
+{
+
+  $info = array();
+  
+  $maxLng = $lngBase + $lngSpread;
+  $minLng = $lngBase - $lngSpread;
+
+  if ($maxLng < $minLng)
+    {
+      $temp = $maxLng;
+      $maxLng = $minLng;
+      $minLng = $temp;
+    }
+
+  $decimalPlaces = 5;
+
+  $maxLng = $maxLng * (pow(10, $decimalPlaces));
+  $minLng = $minLng * (pow(10, $decimalPlaces));
+  $divisor = pow(10, $decimalPlaces);
+  $info[] = mt_rand($minLng, $maxLng/$divisor);
+
+  return join(", ", $info);
+}
+
+function LatLng_get_template_options($postdata, $col, $num_cols)
+{
+  var_dump($postdata);
+  global $LatLng_cached_math;
+    
+  if (isset($postdata["includeLat_$col"])) 
+    {
+      $lat = true;
+    }
+    
+  if  (! empty($postdata["includeLng_$col"]))
+    {
+      $lng = true;
+    }
+
+  if (!$lng && !$lat)
+    {
+      return false;
+    }
+
+  $conversionConstant = 69.172;
+
+  if ($lat)
+    {
+      $latBase =  $postdata["latBase_$col"];
+      $latDistanceMiles = $postdata["latDistance_$col"];
+      $latSpread = $latDistanceMiles / $conversionConstant;
+     
+      if (!checkBoundaries(90, $latBase, $latSpread))
+	{
+	  return false;
+	} 
+    }
+
+  if ($lng)
+    {
+      $lngBase  =  $postdata["lngBase_$col"];
+      $lngDistanceMiles = $postdata["lngDistance_$col"];
+      $lngSpread = $lngDistanceMiles / ($conversionConstant * cos($lngBase));  
+ 
+      if ((! checkBoundaries(180, $lngBase, $lngSpread)))
+	{
+	  return false;
+	}
+    }
+
+  $distro =  $postdata["distributionType_$col"];
+   
+  $options = array(
+		   "lat" => $lat;
+		   "lng" => $lng;
+		   "distro" => $distro
+		   );
+
+  $LatLng_cached_math = array(
+			      "latBase" => $latBase,
+			      "latSpread" => $latSpread,
+			      "lngBase" => $lngBase,
+			      "lngSpread" => $lngSpread
+			      );
+
+  return $options;
+}
+
+
+function LatLng_generate_item($row, $options, $existing_row_data)
+{
+  
+  var_dump($postdata);
+  global $LatLng_cached_math;
+
+  $info = array();
+  if ($options["distro"] == "MAX")
+    {
+      if ($options["lat"] && $options["lng"])
+	{
+	  return
+	  generateUniformLatAndLong(
+				    $latLng_cached_math["latBase"],
+				    $latLng_cached_math["latSpread"],
+				    $latLng_cached_math["lngBase"],
+				    $latLng_cached_math["lngSpread"]
+				    );
+	}
+      else if ($options["lat"])
+	{
+	  return "moo";
+	    /*	    generateUniformLat(
+			       $latLng_cached_math["latBase"],
+			       $latLng_cached_math["latSpread"]
+			       );
+	    */
+	}
+      else if ($options["lng"])
+	{
+	  return
+	   	    generateUniformLng(
+			       $latLng_cached_math["lngBase"],
+			       $latLng_cached_math["lngSpread"]
+			       );
+	}
+    }
+  
+  else if ($options["distro"] == "STD")
+    {
+      if ($options["lat"] && $options["lng"])
+	{
+	  return
+	    generateNormalLatAndLong(
+				     $latLng_cached_math["latBase"],
+				     $latLng_cached_math["latSpread"],
+				     $latLng_cached_math["lngBase"],
+				     $latLng_cached_math["lngSpread"]
+				     );
+	}
+      else if ($options["lat"])
+	{
+	  return 
+	    generateNormalLat(
+			      $latLng_cached_math["latBase"],
+			      $latLng_cached_math["latSpread"]
+			      );
+	}
+      else if ($options["lng"])
+	{
+	  return
+	    generateNormalLng(
+			      $latLng_cached_math["latBase"],
+			      $latLng_cached_math["latSpread"]
+			      );
+	}
+    }
+}
+
+
+function LatLng_get_export_type_info($export_type, $options)
+{ 
+  $info = "";
+  switch ($export_type)
+  {
+  	case "sql":
+  		if ($options == "MySQL" || $options == "SQLite")
+        $info = "varchar(30) default NULL";
+      else
+        $info = "varchar2(30) default NULL";
+  	  break;
+  }
+
+  return $info;
+}
